@@ -38,6 +38,7 @@ class PlanManagerScreen extends StatefulWidget {
 class _PlanManagerScreenState extends State<PlanManagerScreen> {
   List<Plan> plans = [];
   DateTime _selectedDay = DateTime.now();
+  DateTime _focusedDay = DateTime.now(); // Add a focusedDay variable
 
   void _createPlan(String name, String description, DateTime date) {
     setState(() {
@@ -146,6 +147,8 @@ class _PlanManagerScreenState extends State<PlanManagerScreen> {
                   plan.name = name;
                   plan.description = description;
                   plan.date = selectedDate;
+                  _selectedDay = selectedDate; // Update selected date
+                  _focusedDay = selectedDate; // Update focused day as well
                 });
                 Navigator.of(context).pop();
               },
@@ -182,13 +185,14 @@ class _PlanManagerScreenState extends State<PlanManagerScreen> {
       body: Column(
         children: [
           TableCalendar(
-            focusedDay: _selectedDay,
+            focusedDay: _focusedDay, // Use _focusedDay
             firstDay: DateTime(2000),
             lastDay: DateTime(2100),
             selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
             onDaySelected: (selectedDay, focusedDay) {
               setState(() {
                 _selectedDay = selectedDay;
+                _focusedDay = focusedDay; // Update focused day
               });
             },
             calendarStyle: CalendarStyle(
@@ -210,7 +214,8 @@ class _PlanManagerScreenState extends State<PlanManagerScreen> {
                 Color planColor =
                     plan.isCompleted ? Colors.green : Colors.orange;
 
-                return plan.date == _selectedDay
+                // Only show tasks that match the selected date
+                return isSameDay(plan.date, _selectedDay)
                     ? Dismissible(
                         key: Key(plan.name),
                         onDismissed: (direction) => _deletePlan(plan),
@@ -229,7 +234,7 @@ class _PlanManagerScreenState extends State<PlanManagerScreen> {
                           ),
                         ),
                       )
-                    : Container();
+                    : Container(); // Only show tasks for the selected day
               },
             ),
           ),
