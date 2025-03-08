@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:table_calendar/table_calendar.dart';
 
 void main() {
   runApp(AdoptionTravelApp());
@@ -21,11 +22,12 @@ class Plan {
   DateTime date;
   bool isCompleted;
 
-  Plan(
-      {required this.name,
-      required this.description,
-      required this.date,
-      this.isCompleted = false});
+  Plan({
+    required this.name,
+    required this.description,
+    required this.date,
+    this.isCompleted = false,
+  });
 }
 
 class PlanManagerScreen extends StatefulWidget {
@@ -35,101 +37,19 @@ class PlanManagerScreen extends StatefulWidget {
 
 class _PlanManagerScreenState extends State<PlanManagerScreen> {
   List<Plan> plans = [];
+  DateTime _selectedDay = DateTime.now();
 
   void _createPlan(String name, String description, DateTime date) {
     setState(() {
       plans.add(Plan(name: name, description: description, date: date));
-      plans.sort((a, b) =>
-          a.isCompleted == b.isCompleted ? 0 : (a.isCompleted ? 1 : -1));
-    });
-  }
-
-  void _editPlan(int index) {
-    String name = plans[index].name;
-    String description = plans[index].description;
-    DateTime selectedDate = plans[index].date;
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        TextEditingController nameController =
-            TextEditingController(text: name);
-        TextEditingController descriptionController =
-            TextEditingController(text: description);
-
-        return AlertDialog(
-          title: Text('Edit Plan'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                decoration: InputDecoration(labelText: 'Name'),
-                controller: nameController,
-                onChanged: (value) => name = value,
-              ),
-              TextField(
-                decoration: InputDecoration(labelText: 'Description'),
-                controller: descriptionController,
-                onChanged: (value) => description = value,
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  DateTime? picked = await showDatePicker(
-                    context: context,
-                    initialDate: selectedDate,
-                    firstDate: DateTime(2000),
-                    lastDate: DateTime(2100),
-                  );
-                  if (picked != null) {
-                    setState(() {
-                      selectedDate = picked;
-                    });
-                  }
-                },
-                child: Text('Select Date'),
-              )
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  plans[index].name = nameController.text;
-                  plans[index].description = descriptionController.text;
-                  plans[index].date = selectedDate;
-                });
-                Navigator.of(context).pop();
-              },
-              child: Text('Save'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _toggleComplete(int index) {
-    setState(() {
-      plans[index].isCompleted = !plans[index].isCompleted;
-      plans.sort((a, b) =>
-          a.isCompleted == b.isCompleted ? 0 : (a.isCompleted ? 1 : -1));
-    });
-  }
-
-  void _deletePlan(int index) {
-    setState(() {
-      plans.removeAt(index);
+      plans.sort((a, b) => a.date.compareTo(b.date));
     });
   }
 
   void _showCreatePlanDialog() {
     String name = '';
     String description = '';
-    DateTime selectedDate = DateTime.now();
+    DateTime selectedDate = _selectedDay;
 
     showDialog(
       context: context,
@@ -147,22 +67,6 @@ class _PlanManagerScreenState extends State<PlanManagerScreen> {
                 decoration: InputDecoration(labelText: 'Description'),
                 onChanged: (value) => description = value,
               ),
-              ElevatedButton(
-                onPressed: () async {
-                  DateTime? picked = await showDatePicker(
-                    context: context,
-                    initialDate: DateTime.now(),
-                    firstDate: DateTime(2000),
-                    lastDate: DateTime(2100),
-                  );
-                  if (picked != null) {
-                    setState(() {
-                      selectedDate = picked;
-                    });
-                  }
-                },
-                child: Text('Select Date'),
-              )
             ],
           ),
           actions: [
@@ -183,6 +87,82 @@ class _PlanManagerScreenState extends State<PlanManagerScreen> {
     );
   }
 
+  void _toggleComplete(Plan plan) {
+    setState(() {
+      plan.isCompleted = !plan.isCompleted;
+    });
+  }
+
+  void _editPlan(Plan plan) {
+    String name = plan.name;
+    String description = plan.description;
+    DateTime selectedDate = plan.date;
+
+    // Show dialog to edit the plan
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Edit Plan'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: TextEditingController(text: name),
+                decoration: InputDecoration(labelText: 'Name'),
+                onChanged: (value) => name = value,
+              ),
+              TextField(
+                controller: TextEditingController(text: description),
+                decoration: InputDecoration(labelText: 'Description'),
+                onChanged: (value) => description = value,
+              ),
+              // Date picker
+              ListTile(
+                title: Text('Date: ${selectedDate.toLocal()}'.split(' ')[0]),
+                onTap: () async {
+                  DateTime? picked = await showDatePicker(
+                    context: context,
+                    initialDate: selectedDate,
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime(2101),
+                  );
+                  if (picked != null && picked != selectedDate)
+                    setState(() {
+                      selectedDate = picked;
+                    });
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  plan.name = name;
+                  plan.description = description;
+                  plan.date = selectedDate;
+                });
+                Navigator.of(context).pop();
+              },
+              child: Text('Save Changes'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _deletePlan(Plan plan) {
+    setState(() {
+      plans.remove(plan);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -191,57 +171,69 @@ class _PlanManagerScreenState extends State<PlanManagerScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Adoption & Travel Plans'),
-            Text('Swipe to complete, long press to edit, double tap to delete',
-                style: TextStyle(fontSize: 14, color: Colors.white70)),
+            Text(
+              'Swipe to complete, long press to edit, double tap to delete',
+              style: TextStyle(fontSize: 14, color: Colors.white70),
+            ),
           ],
         ),
         backgroundColor: Colors.brown,
       ),
-      body: ListView.builder(
-        itemCount: plans.length,
-        itemBuilder: (context, index) {
-          final plan = plans[index];
-          return Dismissible(
-            key: UniqueKey(),
-            direction: DismissDirection.startToEnd,
-            onDismissed: (_) => _toggleComplete(index),
-            background: Container(
+      body: Column(
+        children: [
+          TableCalendar(
+            focusedDay: _selectedDay,
+            firstDay: DateTime(2000),
+            lastDay: DateTime(2100),
+            selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+            onDaySelected: (selectedDay, focusedDay) {
+              setState(() {
+                _selectedDay = selectedDay;
+              });
+            },
+            calendarStyle: CalendarStyle(
+              selectedDecoration: BoxDecoration(
                 color: Colors.pink,
-                alignment: Alignment.centerLeft,
-                padding: EdgeInsets.only(left: 20),
-                child: Icon(Icons.check, color: Colors.white, size: 32)),
-            child: GestureDetector(
-              onLongPress: () => _editPlan(index),
-              onDoubleTap: () => _deletePlan(index),
-              child: Container(
-                margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color:
-                      plan.isCompleted ? Colors.brown[100] : Colors.pink[100],
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                        color: Colors.black12,
-                        blurRadius: 4,
-                        offset: Offset(2, 2))
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(plan.name,
-                        style: TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold)),
-                    Text(plan.description),
-                    Text('${plan.date.toLocal()}'.split(' ')[0],
-                        style: TextStyle(color: Colors.grey)),
-                  ],
-                ),
+                shape: BoxShape.circle,
               ),
             ),
-          );
-        },
+            availableCalendarFormats: const {
+              CalendarFormat.month: 'Month',
+            },
+          ),
+          Expanded(
+            child: ListView.builder(
+              itemCount: plans.length,
+              itemBuilder: (context, index) {
+                final plan = plans[index];
+                // Color-code based on status
+                Color planColor =
+                    plan.isCompleted ? Colors.green : Colors.orange;
+
+                return plan.date == _selectedDay
+                    ? Dismissible(
+                        key: Key(plan.name),
+                        onDismissed: (direction) => _deletePlan(plan),
+                        child: GestureDetector(
+                          onLongPress: () =>
+                              _editPlan(plan), // Long press to edit
+                          onDoubleTap: () => _deletePlan(plan),
+                          child: ListTile(
+                            tileColor: planColor.withOpacity(0.2),
+                            title: Text(plan.name),
+                            subtitle: Text(plan.description),
+                            trailing: IconButton(
+                              icon: Icon(Icons.check),
+                              onPressed: () => _toggleComplete(plan),
+                            ),
+                          ),
+                        ),
+                      )
+                    : Container();
+              },
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showCreatePlanDialog,
